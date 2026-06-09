@@ -13,11 +13,11 @@ from transformers import (
 def load_soil_model():
 
     tokenizer = T5Tokenizer.from_pretrained(
-        "soil_model"
+            "soil_model"
     )
 
     model = T5ForConditionalGeneration.from_pretrained(
-        "soil_model"
+    "soil_model"
     )
 
     return tokenizer, model
