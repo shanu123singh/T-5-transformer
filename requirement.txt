@@ -1,8 +1,0 @@
-streamlit==1.48.1
-torch==2.11.0
-transformers==5.10.2
-sentencepiece==0.2.1
-pandas==2.3.2
-numpy==2.3.2
-protobuf==6.32.1
-safetensors==0.6.2
