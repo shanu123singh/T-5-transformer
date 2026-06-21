@@ -1,4 +1,5 @@
 import streamlit as st
+import os
 
 from transformers import (
     T5Tokenizer,
@@ -12,13 +13,31 @@ from transformers import (
 @st.cache_resource
 def load_soil_model():
 
-    tokenizer = T5Tokenizer.from_pretrained(
-        "t5-small"
-    )
+    MODEL_PATH = "soil_model_v2"
 
-    model = T5ForConditionalGeneration.from_pretrained(
-        "t5-small"
-    )
+    if os.path.exists(MODEL_PATH):
+
+        print("Loading trained model...")
+
+        tokenizer = T5Tokenizer.from_pretrained(
+            MODEL_PATH
+        )
+
+        model = T5ForConditionalGeneration.from_pretrained(
+            MODEL_PATH
+        )
+
+    else:
+
+        print("Loading base model...")
+
+        tokenizer = T5Tokenizer.from_pretrained(
+            "t5-small"
+        )
+
+        model = T5ForConditionalGeneration.from_pretrained(
+            "t5-small"
+        )
 
     return tokenizer, model
 
@@ -47,7 +66,6 @@ temperature: {temperature}
 humidity: {humidity}
 ph: {ph}
 rainfall: {rainfall}
-
 question: which crop should i grow?
 """
 
@@ -70,6 +88,11 @@ question: which crop should i grow?
         skip_special_tokens=True
     )
 
+    prediction = prediction.replace(
+        "Recommended crop:",
+        ""
+    ).strip()
+
     return prediction
 
 
@@ -83,9 +106,14 @@ st.set_page_config(
 )
 
 st.title("🌱 AI Soil Advisor")
-st.write("Crop Recommendation using T5 Transformer")
 
-st.subheader("Enter Soil Information")
+st.write(
+    "Crop Recommendation using T5 Transformer"
+)
+
+st.subheader(
+    "Enter Soil Information"
+)
 
 N = st.number_input(
     "Nitrogen (N)",
@@ -131,7 +159,9 @@ rainfall = st.number_input(
 
 if st.button("Recommend Crop"):
 
-    with st.spinner("Analyzing Soil..."):
+    with st.spinner(
+        "Analyzing Soil..."
+    ):
 
         crop = predict_crop(
             N,
