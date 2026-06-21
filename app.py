@@ -8,52 +8,35 @@ st.set_page_config(
 )
 
 # -----------------------------
-# Load Model
+# Load Model (FIXED)
 # -----------------------------
 
 @st.cache_resource
 def load_soil_model():
 
-    MODEL_PATH = "soil_model_v2"
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    MODEL_PATH = os.path.join(base_dir, "soil_model_v2")
 
     try:
+        # Check if custom model exists AND is not empty
+        if os.path.exists(MODEL_PATH) and len(os.listdir(MODEL_PATH)) > 0:
 
-        if os.path.exists(MODEL_PATH):
+            st.sidebar.success("✅ Loading Trained Model (soil_model_v2)")
 
-            st.sidebar.success(
-                "Loading Trained Model"
-            )
-
-            tokenizer = T5Tokenizer.from_pretrained(
-                MODEL_PATH
-            )
-
-            model = T5ForConditionalGeneration.from_pretrained(
-                MODEL_PATH
-            )
+            tokenizer = T5Tokenizer.from_pretrained(MODEL_PATH)
+            model = T5ForConditionalGeneration.from_pretrained(MODEL_PATH)
 
         else:
 
-            st.sidebar.warning(
-                "soil_model_v2 not found. Loading t5-small."
-            )
+            st.sidebar.warning("⚠️ soil_model_v2 not found. Loading t5-small.")
 
-            tokenizer = T5Tokenizer.from_pretrained(
-                "t5-small"
-            )
-
-            model = T5ForConditionalGeneration.from_pretrained(
-                "t5-small"
-            )
+            tokenizer = T5Tokenizer.from_pretrained("t5-small")
+            model = T5ForConditionalGeneration.from_pretrained("t5-small")
 
         return tokenizer, model
 
     except Exception as e:
-
-        st.error(
-            f"Model Loading Error: {e}"
-        )
-
+        st.error(f"❌ Model Loading Error: {e}")
         st.stop()
 
 
@@ -63,15 +46,7 @@ tokenizer, model = load_soil_model()
 # Prediction Function
 # -----------------------------
 
-def predict_crop(
-    N,
-    P,
-    K,
-    temperature,
-    humidity,
-    ph,
-    rainfall
-):
+def predict_crop(N, P, K, temperature, humidity, ph, rainfall):
 
     input_text = f"""
 soil_nitrogen: {N}
@@ -88,92 +63,41 @@ question: which crop should i grow?
         input_text,
         return_tensors="pt",
         truncation=True,
-        max_length=64
+        max_length=128   # FIXED (64 too small for T5 input)
     )
 
     outputs = model.generate(
         input_ids=inputs["input_ids"],
         attention_mask=inputs["attention_mask"],
-        max_length=20,
-        num_beams=5
+        max_length=30,
+        num_beams=5,
+        early_stopping=True
     )
 
-    prediction = tokenizer.decode(
-        outputs[0],
-        skip_special_tokens=True
-    )
+    prediction = tokenizer.decode(outputs[0], skip_special_tokens=True)
 
-    prediction = prediction.replace(
-        "Recommended crop:",
-        ""
-    ).strip()
+    return prediction.replace("Recommended crop:", "").strip()
 
-    return prediction
 
 # -----------------------------
 # UI
 # -----------------------------
 
 st.title("🌱 AI Soil Advisor")
+st.write("Crop Recommendation using T5 Transformer")
 
-st.write(
-    "Crop Recommendation using T5 Transformer"
-)
+N = st.number_input("Nitrogen (N)", min_value=0.0, value=90.0)
+P = st.number_input("Phosphorus (P)", min_value=0.0, value=42.0)
+K = st.number_input("Potassium (K)", min_value=0.0, value=43.0)
 
-N = st.number_input(
-    "Nitrogen (N)",
-    min_value=0.0,
-    value=90.0
-)
+temperature = st.number_input("Temperature", value=21.0)
+humidity = st.number_input("Humidity", value=82.0)
+ph = st.number_input("pH", value=6.5)
+rainfall = st.number_input("Rainfall", value=203.0)
 
-P = st.number_input(
-    "Phosphorus (P)",
-    min_value=0.0,
-    value=42.0
-)
+if st.button("🌾 Recommend Crop"):
 
-K = st.number_input(
-    "Potassium (K)",
-    min_value=0.0,
-    value=43.0
-)
+    with st.spinner("Analyzing Soil..."):
+        crop = predict_crop(N, P, K, temperature, humidity, ph, rainfall)
 
-temperature = st.number_input(
-    "Temperature",
-    value=21.0
-)
-
-humidity = st.number_input(
-    "Humidity",
-    value=82.0
-)
-
-ph = st.number_input(
-    "pH",
-    value=6.5
-)
-
-rainfall = st.number_input(
-    "Rainfall",
-    value=203.0
-)
-
-if st.button("Recommend Crop"):
-
-    with st.spinner(
-        "Analyzing Soil..."
-    ):
-
-        crop = predict_crop(
-            N,
-            P,
-            K,
-            temperature,
-            humidity,
-            ph,
-            rainfall
-        )
-
-    st.success(
-        f"Recommended Crop: {crop}"
-    )
+    st.success(f"🌾 Recommended Crop: {crop}")

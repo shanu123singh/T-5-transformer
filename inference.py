@@ -1,20 +1,11 @@
-from load_model import model, tokenizer
+def predict(model, tokenizer, text):
+    inputs = tokenizer.encode(text, return_tensors="pt")
 
-def predict(text):
-
-    inputs = tokenizer(
-        text,
-        return_tensors="pt",
-        truncation=True
+    outputs = model.generate(
+        inputs,
+        max_length=50,
+        num_beams=4,
+        early_stopping=True
     )
 
-    output = model.generate(
-        inputs["input_ids"],
-        max_length=80,
-        num_beams=5
-    )
-
-    return tokenizer.decode(
-        output[0],
-        skip_special_tokens=True
-    )
+    return tokenizer.decode(outputs[0], skip_special_tokens=True)
