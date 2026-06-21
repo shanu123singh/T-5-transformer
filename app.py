@@ -1,30 +1,63 @@
 import streamlit as st
+import os
 from transformers import T5Tokenizer, T5ForConditionalGeneration
 
+st.set_page_config(
+    page_title="AI Soil Advisor",
+    page_icon="🌱"
+)
+
 # -----------------------------
-# Load Trained Model
+# Load Model
 # -----------------------------
 
 @st.cache_resource
 def load_soil_model():
 
-    tokenizer = T5Tokenizer.from_pretrained(
-        "soil_model_v2"
-    )
+    MODEL_PATH = "soil_model_v2"
 
-    model = T5ForConditionalGeneration.from_pretrained(
-        "soil_model_v2"
-    )
+    try:
 
-    return tokenizer, model
+        if os.path.exists(MODEL_PATH):
+
+            st.sidebar.success(
+                "Loading Trained Model"
+            )
+
+            tokenizer = T5Tokenizer.from_pretrained(
+                MODEL_PATH
+            )
+
+            model = T5ForConditionalGeneration.from_pretrained(
+                MODEL_PATH
+            )
+
+        else:
+
+            st.sidebar.warning(
+                "soil_model_v2 not found. Loading t5-small."
+            )
+
+            tokenizer = T5Tokenizer.from_pretrained(
+                "t5-small"
+            )
+
+            model = T5ForConditionalGeneration.from_pretrained(
+                "t5-small"
+            )
+
+        return tokenizer, model
+
+    except Exception as e:
+
+        st.error(
+            f"Model Loading Error: {e}"
+        )
+
+        st.stop()
 
 
 tokenizer, model = load_soil_model()
-
-# Debug
-st.sidebar.success(
-    f"Model Loaded: {model.config._name_or_path}"
-)
 
 # -----------------------------
 # Prediction Function
@@ -77,24 +110,14 @@ question: which crop should i grow?
 
     return prediction
 
-
 # -----------------------------
-# Streamlit UI
+# UI
 # -----------------------------
-
-st.set_page_config(
-    page_title="AI Soil Advisor",
-    page_icon="🌱"
-)
 
 st.title("🌱 AI Soil Advisor")
 
 st.write(
     "Crop Recommendation using T5 Transformer"
-)
-
-st.subheader(
-    "Enter Soil Information"
 )
 
 N = st.number_input(
@@ -135,26 +158,22 @@ rainfall = st.number_input(
     value=203.0
 )
 
-# -----------------------------
-# Predict Button
-# -----------------------------
-
 if st.button("Recommend Crop"):
 
-    crop = predict_crop(
-        N,
-        P,
-        K,
-        temperature,
-        humidity,
-        ph,
-        rainfall
-    )
+    with st.spinner(
+        "Analyzing Soil..."
+    ):
+
+        crop = predict_crop(
+            N,
+            P,
+            K,
+            temperature,
+            humidity,
+            ph,
+            rainfall
+        )
 
     st.success(
         f"Recommended Crop: {crop}"
-    )
-
-    st.info(
-        f"{crop} is predicted as the most suitable crop for the given soil conditions."
     )
