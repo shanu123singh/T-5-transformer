@@ -21,6 +21,7 @@ model.to(device)
 
 dataset = dataset[:100]
 
+
 print("Dataset Size:", len(dataset))
 
 
@@ -89,14 +90,24 @@ for epoch in range(epochs):
     )
 
 
-save_path = "soil_model"
+import os
+import shutil
 
-os.makedirs(
+# Save model
+save_path = "soil_model_v2"
+
+# Agar folder pehle se exist karta hai to delete kar do
+if os.path.exists(save_path):
+    shutil.rmtree(save_path)
+
+os.makedirs(save_path, exist_ok=True)
+
+# Save model (.bin format me)
+model.save_pretrained(
     save_path,
-    exist_ok=True
+    safe_serialization=False
 )
 
-model.save_pretrained(save_path)
 tokenizer.save_pretrained(save_path)
 
-print("Model Saved Successfully")
+print(f"Model Saved Successfully at {save_path}")

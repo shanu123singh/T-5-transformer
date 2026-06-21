@@ -1,9 +1,13 @@
 from transformers import T5Tokenizer, T5ForConditionalGeneration
+import os
 
-print("Loading tokenizer...")
-tokenizer = T5Tokenizer.from_pretrained("t5-small")
-print("Tokenizer loaded")
+MODEL_PATH = "soil_model_v2"
 
-print("Loading model...")
-model = T5ForConditionalGeneration.from_pretrained("t5-small")
-print("Model loaded")
+if os.path.exists(MODEL_PATH):
+    print("Loading trained model...")
+    tokenizer = T5Tokenizer.from_pretrained(MODEL_PATH)
+    model = T5ForConditionalGeneration.from_pretrained(MODEL_PATH)
+else:
+    print("Loading base T5 model...")
+    tokenizer = T5Tokenizer.from_pretrained("t5-small")
+    model = T5ForConditionalGeneration.from_pretrained("t5-small")
