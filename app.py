@@ -1,10 +1,5 @@
 import streamlit as st
-import os
-
-from transformers import (
-    T5Tokenizer,
-    T5ForConditionalGeneration
-)
+from transformers import T5Tokenizer, T5ForConditionalGeneration
 
 # -----------------------------
 # Load Trained Model
@@ -13,36 +8,23 @@ from transformers import (
 @st.cache_resource
 def load_soil_model():
 
-    MODEL_PATH = "soil_model_v2"
+    tokenizer = T5Tokenizer.from_pretrained(
+        "soil_model_v2"
+    )
 
-    if os.path.exists(MODEL_PATH):
-
-        print("Loading trained model...")
-
-        tokenizer = T5Tokenizer.from_pretrained(
-            MODEL_PATH
-        )
-
-        model = T5ForConditionalGeneration.from_pretrained(
-            MODEL_PATH
-        )
-
-    else:
-
-        print("Loading base model...")
-
-        tokenizer = T5Tokenizer.from_pretrained(
-            "t5-small"
-        )
-
-        model = T5ForConditionalGeneration.from_pretrained(
-            "t5-small"
-        )
+    model = T5ForConditionalGeneration.from_pretrained(
+        "soil_model_v2"
+    )
 
     return tokenizer, model
 
 
 tokenizer, model = load_soil_model()
+
+# Debug
+st.sidebar.success(
+    f"Model Loaded: {model.config._name_or_path}"
+)
 
 # -----------------------------
 # Prediction Function
@@ -159,19 +141,15 @@ rainfall = st.number_input(
 
 if st.button("Recommend Crop"):
 
-    with st.spinner(
-        "Analyzing Soil..."
-    ):
-
-        crop = predict_crop(
-            N,
-            P,
-            K,
-            temperature,
-            humidity,
-            ph,
-            rainfall
-        )
+    crop = predict_crop(
+        N,
+        P,
+        K,
+        temperature,
+        humidity,
+        ph,
+        rainfall
+    )
 
     st.success(
         f"Recommended Crop: {crop}"
