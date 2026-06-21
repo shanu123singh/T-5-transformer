@@ -8,7 +8,7 @@ st.set_page_config(
 )
 
 # -----------------------------
-# Load Model (FIXED)
+# LOAD MODEL
 # -----------------------------
 
 @st.cache_resource
@@ -18,7 +18,6 @@ def load_soil_model():
     MODEL_PATH = os.path.join(base_dir, "soil_model_v2")
 
     try:
-        # Check if custom model exists AND is not empty
         if os.path.exists(MODEL_PATH) and len(os.listdir(MODEL_PATH)) > 0:
 
             st.sidebar.success("✅ Loading Trained Model (soil_model_v2)")
@@ -28,7 +27,7 @@ def load_soil_model():
 
         else:
 
-            st.sidebar.warning("⚠️ soil_model_v2 not found. Loading t5-small.")
+            st.sidebar.warning("⚠️ soil_model_v2 not found. Loading t5-small")
 
             tokenizer = T5Tokenizer.from_pretrained("t5-small")
             model = T5ForConditionalGeneration.from_pretrained("t5-small")
@@ -36,47 +35,64 @@ def load_soil_model():
         return tokenizer, model
 
     except Exception as e:
-        st.error(f"❌ Model Loading Error: {e}")
+        st.error(f"Model Loading Error: {e}")
         st.stop()
 
 
 tokenizer, model = load_soil_model()
 
 # -----------------------------
-# Prediction Function
+# PREDICTION FUNCTION (FIXED)
 # -----------------------------
 
 def predict_crop(N, P, K, temperature, humidity, ph, rainfall):
 
+    # CLEAN PROMPT (IMPORTANT FIX)
     input_text = f"""
-soil_nitrogen: {N}
-soil_phosphorus: {P}
-soil_potassium: {K}
-temperature: {temperature}
-humidity: {humidity}
-ph: {ph}
-rainfall: {rainfall}
-question: which crop should i grow?
+You are an agricultural expert.
+Predict only ONE crop name based on soil data.
+
+N:{N}
+P:{P}
+K:{K}
+Temperature:{temperature}
+Humidity:{humidity}
+pH:{ph}
+Rainfall:{rainfall}
+
+Answer:
 """
 
     inputs = tokenizer(
         input_text,
         return_tensors="pt",
         truncation=True,
-        max_length=128   # FIXED (64 too small for T5 input)
+        max_length=128
     )
 
     outputs = model.generate(
         input_ids=inputs["input_ids"],
         attention_mask=inputs["attention_mask"],
-        max_length=30,
-        num_beams=5,
-        early_stopping=True
+
+        max_length=5,
+        num_beams=10,
+        early_stopping=True,
+        repetition_penalty=2.5,
+        no_repeat_ngram_size=2
     )
 
     prediction = tokenizer.decode(outputs[0], skip_special_tokens=True)
 
-    return prediction.replace("Recommended crop:", "").strip()
+    prediction = prediction.strip().lower()
+
+    # REMOVE GARBAGE OUTPUT
+    if "n:" in prediction or "ph:" in prediction or "rainfall:" in prediction:
+        return "⚠️ model needs retraining"
+
+    if prediction == "":
+        return "⚠️ no prediction"
+
+    return prediction
 
 
 # -----------------------------
@@ -86,9 +102,9 @@ question: which crop should i grow?
 st.title("🌱 AI Soil Advisor")
 st.write("Crop Recommendation using T5 Transformer")
 
-N = st.number_input("Nitrogen (N)", min_value=0.0, value=90.0)
-P = st.number_input("Phosphorus (P)", min_value=0.0, value=42.0)
-K = st.number_input("Potassium (K)", min_value=0.0, value=43.0)
+N = st.number_input("Nitrogen (N)", 0.0, value=90.0)
+P = st.number_input("Phosphorus (P)", 0.0, value=42.0)
+K = st.number_input("Potassium (K)", 0.0, value=43.0)
 
 temperature = st.number_input("Temperature", value=21.0)
 humidity = st.number_input("Humidity", value=82.0)
@@ -97,7 +113,8 @@ rainfall = st.number_input("Rainfall", value=203.0)
 
 if st.button("🌾 Recommend Crop"):
 
-    with st.spinner("Analyzing Soil..."):
-        crop = predict_crop(N, P, K, temperature, humidity, ph, rainfall)
+    with st.spinner("Analyzing soil..."):
 
-    st.success(f"🌾 Recommended Crop: {crop}")
+        result = predict_crop(N, P, K, temperature, humidity, ph, rainfall)
+
+    st.success(f"🌾 Recommended Crop: {result}")
